@@ -26,12 +26,12 @@ type Session struct {
 	RevokedAt *time.Time
 }
 
-type sessionService struct {
+type authWithSession struct {
 	db *gorm.DB
 }
 
-func NewSessionService(db *gorm.DB) *sessionService {
-	return &sessionService{
+func NewAuthWithSession(db *gorm.DB) *authWithSession {
+	return &authWithSession{
 		db: db,
 	}
 }
@@ -41,7 +41,7 @@ type shortSessionDetail struct {
 	ExpiresAt time.Time
 }
 
-func (s *sessionService) Login(ctx context.Context,
+func (s *authWithSession) Login(ctx context.Context,
 	email, password string) (*shortSessionDetail, error) {
 
 	user, err := gorm.G[User](s.db).Where("email = ?", email).First(ctx)
@@ -82,7 +82,7 @@ func (s *sessionService) Login(ctx context.Context,
 	}, nil
 }
 
-func (s *sessionService) Logout(ctx context.Context,
+func (s *authWithSession) Logout(ctx context.Context,
 	sessionId string) error {
 
 	session, err := gorm.G[Session](s.db).
@@ -105,7 +105,7 @@ func (s *sessionService) Logout(ctx context.Context,
 	return nil
 }
 
-func (s *sessionService) GetUserIdFromSession(ctx context.Context, id string) (uint, error) {
+func (s *authWithSession) GetUserIdFromSession(ctx context.Context, id string) (uint, error) {
 	var err error
 	var session Session
 
