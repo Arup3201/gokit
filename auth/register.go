@@ -7,36 +7,23 @@ import (
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 var emailRegex, _ = regexp.Compile(
 	`^[a-zA-Z0-9]+([._-][0-9a-zA-Z]+)*@[a-zA-Z0-9]+([.-][0-9a-zA-Z]+)*\.[a-zA-Z]{2,}$`,
 )
 
-type UserCreator interface {
-	/*
-		Create user with email, full name and hashed password
-
-		Ideally, the function will save the user with email, full name and hashed password in the database.
-
-		It returns the ID of the user created.
-		The type of the ID is any.
-
-		In case of a problem, it should return non-nil error.
-	*/
-	Create(context.Context, string, string, string) (any, error)
-}
-
 type registerService struct {
 	bcryptPasswordCost int
-	userCreator        UserCreator
+	db                 *gorm.DB
 }
 
 func NewRegisterService(bcryptPasswordCost int,
-	creator UserCreator) *registerService {
+	db *gorm.DB) *registerService {
 	return &registerService{
 		bcryptPasswordCost: bcryptPasswordCost,
-		userCreator:        creator,
+		db:                 db,
 	}
 }
 
@@ -55,28 +42,34 @@ of the Create function of the UserCreator interface type.
 In case of any problem, it returns non-nil error.
 */
 func (s *registerService) Register(ctx context.Context,
-	email, fullName, password string) (any, error) {
+	email, fullName, password string) (uint, error) {
 	var err error
 
 	if match := emailRegex.Find([]byte(email)); match == nil {
-		return nil, fmt.Errorf("email address is invalid")
+		return 0, fmt.Errorf("email address is invalid")
 	}
 
 	if strings.Trim(fullName, " ") == "" {
-		return nil, fmt.Errorf("full name cannot be empty")
+		return 0, fmt.Errorf("full name cannot be empty")
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password),
 		s.bcryptPasswordCost)
 	if err != nil {
-		return nil, fmt.Errorf("bcrypt generate from password: %w", err)
+		return 0, fmt.Errorf("bcrypt generate from password: %w", err)
 	}
 
-	var id any
-	id, err = s.userCreator.Create(ctx, email, fullName, string(hashedPassword))
+	user := User{
+		Email:         email,
+		FullName:      fullName,
+		Password:      string(hashedPassword),
+		EmailVerified: false,
+	}
+
+	err = gorm.G[User](s.db).Create(ctx, &user)
 	if err != nil {
-		return nil, fmt.Errorf("user create: %w", err)
+		return 0, fmt.Errorf("create user: %w", err)
 	}
 
-	return id, nil
+	return user.ID, nil
 }
