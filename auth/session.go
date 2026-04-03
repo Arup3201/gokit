@@ -96,3 +96,23 @@ func (s *sessionService) Logout(ctx context.Context,
 
 	return nil
 }
+
+func (s *sessionService) GetUserIdFromSession(ctx context.Context, id string) (uint, error) {
+	var err error
+	var session Session
+
+	session, err = gorm.G[Session](s.db).
+		Where("id = ? AND revoked_at IS NULL AND expires_at >= ?",
+			id, time.Now().UTC()).
+		First(ctx)
+	if err != nil {
+		switch err {
+		case gorm.ErrRecordNotFound:
+			return 0, fmt.Errorf("session not found")
+		default:
+			return 0, fmt.Errorf("gorm session where clause: %w", err)
+		}
+	}
+
+	return session.UserId, nil
+}
