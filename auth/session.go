@@ -36,25 +36,30 @@ func NewSessionService(db *gorm.DB) *sessionService {
 	}
 }
 
+type shortSessionDetail struct {
+	ID        string
+	ExpiresAt time.Time
+}
+
 func (s *sessionService) Login(ctx context.Context,
-	email, password string) (string, error) {
+	email, password string) (*shortSessionDetail, error) {
 
 	user, err := gorm.G[User](s.db).Where("email = ?", email).First(ctx)
 	if err != nil {
 		switch err {
 		case gorm.ErrRecordNotFound:
-			return "", fmt.Errorf("email not found")
+			return nil, fmt.Errorf("email not found")
 		default:
-			return "", fmt.Errorf("sql where first: %w", err)
+			return nil, fmt.Errorf("sql where first: %w", err)
 		}
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return "", fmt.Errorf("password mismatch")
+		return nil, fmt.Errorf("password mismatch")
 	}
 
 	if !user.EmailVerified {
-		return "", fmt.Errorf("email verification pending")
+		return nil, fmt.Errorf("email verification pending")
 	}
 
 	var sessionId string
@@ -68,10 +73,13 @@ func (s *sessionService) Login(ctx context.Context,
 
 	err = gorm.G[Session](s.db).Create(ctx, &session)
 	if err != nil {
-		return "", fmt.Errorf("session create: %w", err)
+		return nil, fmt.Errorf("session create: %w", err)
 	}
 
-	return sessionId, nil
+	return &shortSessionDetail{
+		ID:        sessionId,
+		ExpiresAt: session.ExpiresAt,
+	}, nil
 }
 
 func (s *sessionService) Logout(ctx context.Context,
