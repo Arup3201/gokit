@@ -36,13 +36,13 @@ func NewAuthWithSession(db *gorm.DB) *authWithSession {
 	}
 }
 
-type shortSessionDetail struct {
+type ShortSessionDetail struct {
 	ID        string
 	ExpiresAt time.Time
 }
 
 func (s *authWithSession) Login(ctx context.Context,
-	email, password string) (*shortSessionDetail, error) {
+	email, password string) (*ShortSessionDetail, error) {
 
 	user, err := gorm.G[User](s.db).Where("email = ?", email).First(ctx)
 	if err != nil {
@@ -76,7 +76,7 @@ func (s *authWithSession) Login(ctx context.Context,
 		return nil, fmt.Errorf("session create: %w", err)
 	}
 
-	return &shortSessionDetail{
+	return &ShortSessionDetail{
 		ID:        sessionId,
 		ExpiresAt: session.ExpiresAt,
 	}, nil
