@@ -30,19 +30,27 @@ type RefreshToken struct {
 	UpdatedAt time.Time
 }
 
+type AccessAndRefreshToken struct {
+	AccessToken, RefreshToken                   string
+	AccessTokenExpiresAt, RefreshTokenExpiresAt time.Time
+}
+
 type authWithJWT struct {
 	db         *gorm.DB
 	privateKey *rsa.PrivateKey
 }
 
-type accessAndRefreshToken struct {
-	AccessToken, RefreshToken                   string
-	AccessTokenExpiresAt, RefreshTokenExpiresAt time.Time
+func NewAuthWithJWT(db *gorm.DB,
+	privateKey *rsa.PrivateKey) *authWithJWT {
+	return &authWithJWT{
+		db:         db,
+		privateKey: privateKey,
+	}
 }
 
 func (a *authWithJWT) Login(ctx context.Context,
 	email, password string,
-	tokenIssuer string) (*accessAndRefreshToken, error) {
+	tokenIssuer string) (*AccessAndRefreshToken, error) {
 
 	user, err := gorm.G[User](a.db).Where("email = ?", email).First(ctx)
 	if err != nil {
@@ -106,7 +114,7 @@ func (a *authWithJWT) Login(ctx context.Context,
 		return nil, fmt.Errorf("jwt sign: %w", err)
 	}
 
-	return &accessAndRefreshToken{
+	return &AccessAndRefreshToken{
 		AccessToken:           accessToken,
 		AccessTokenExpiresAt:  accessExpiry,
 		RefreshToken:          refreshToken,
@@ -115,7 +123,7 @@ func (a *authWithJWT) Login(ctx context.Context,
 }
 
 func (a *authWithJWT) Refresh(ctx context.Context,
-	token, tokenIssuer string) (*accessAndRefreshToken, error) {
+	token, tokenIssuer string) (*AccessAndRefreshToken, error) {
 
 	var err error
 	var claims *gokit.JWTClaims
@@ -190,7 +198,7 @@ func (a *authWithJWT) Refresh(ctx context.Context,
 		return nil, fmt.Errorf("jwt sign: %w", err)
 	}
 
-	return &accessAndRefreshToken{
+	return &AccessAndRefreshToken{
 		AccessToken:           accessToken,
 		AccessTokenExpiresAt:  accessExpiry,
 		RefreshToken:          refreshToken,
