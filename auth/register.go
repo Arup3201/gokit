@@ -10,20 +10,25 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	BCRYPT_PASSWORD_COST_DEFAULT = 14
+)
+
+var (
+	PasswordCost = BCRYPT_PASSWORD_COST_DEFAULT
+)
+
 var emailRegex, _ = regexp.Compile(
 	`^[a-zA-Z0-9]+([._-][0-9a-zA-Z]+)*@[a-zA-Z0-9]+([.-][0-9a-zA-Z]+)*\.[a-zA-Z]{2,}$`,
 )
 
 type registerService struct {
-	bcryptPasswordCost int
-	db                 *gorm.DB
+	db *gorm.DB
 }
 
-func NewRegisterService(bcryptPasswordCost int,
-	db *gorm.DB) *registerService {
+func NewRegisterService(db *gorm.DB) *registerService {
 	return &registerService{
-		bcryptPasswordCost: bcryptPasswordCost,
-		db:                 db,
+		db: db,
 	}
 }
 
@@ -54,7 +59,7 @@ func (s *registerService) Register(ctx context.Context,
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password),
-		s.bcryptPasswordCost)
+		PasswordCost)
 	if err != nil {
 		return 0, fmt.Errorf("bcrypt generate from password: %w", err)
 	}

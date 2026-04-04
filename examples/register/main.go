@@ -26,7 +26,7 @@ func main() {
 	ctx := context.Background()
 
 	var id any
-	registerer := auth.NewRegisterService(14, db)
+	registerer := auth.NewRegisterService(db)
 	id, err = registerer.Register(ctx, "arupjana@example.com", "Arup Jana", "1234")
 	if err != nil {
 		log.Fatalf("register failed: %s\n", err)
